@@ -76,13 +76,18 @@
         "product_card_demo-3": {
           "type": "product",
           "settings": { "product": "the-collection-snowboard-liquid" }
+        },
+        "product_card_demo-4": {
+          "type": "product",
+          "settings": { "product": "good-brand-company" }
         }
       },
       "block_order": [
         "product_card_demo-0",
         "product_card_demo-1",
         "product_card_demo-2",
-        "product_card_demo-3"
+        "product_card_demo-3",
+        "product_card_demo-4"
       ],
       "settings": {
         "heading": "Product card component demo"

@@ -4,6 +4,13 @@
   Accepts:
   - product: {Object} Product Liquid object (required)
 
+  Per-variant hover image convention: if an image's alt text is set to
+  "{option value}-secondary" (e.g. "blue-secondary"), it's used as that
+  variant's hover image. Shopify variants only support a single assigned
+  image, so this alt-text pairing is how a second "worn"/lifestyle shot
+  gets associated with a color instead of relying on file naming (which
+  Shopify mangles with random suffixes on upload).
+
   Usage:
   {% render 'product-card', product: product %}
 {% endcomment %}
@@ -16,12 +23,6 @@
     assign on_sale = true
   endif
 
-  assign primary_image = product.featured_image
-  assign secondary_image = product.media[1].preview_image
-  if secondary_image == primary_image
-    assign secondary_image = nil
-  endif
-
   assign color_option_index = -1
   for option in product.options_with_values
     assign downcased_name = option.name | downcase
@@ -29,6 +30,45 @@
       assign color_option_index = forloop.index0
     endif
   endfor
+
+  assign initial_variant = product.selected_or_first_available_variant
+  assign primary_image = initial_variant.featured_image | default: product.featured_image
+
+  assign initial_color_value = blank
+  if color_option_index > -1
+    assign initial_color_value = initial_variant.options[color_option_index]
+  endif
+
+  # A secondary/hover image only makes sense if the product has more than one
+  # photo at all. Whenever that's true we always render the overlay <img>,
+  # even if the best match for the CURRENTLY selected variant happens to
+  # equal the primary photo — otherwise the element wouldn't exist in the DOM
+  # yet and clicking a swatch whose own pair *does* differ would have
+  # nothing to update.
+  assign secondary_available = false
+  if product.media.size > 1
+    assign secondary_available = true
+  endif
+
+  assign secondary_image = nil
+  if initial_color_value != blank
+    assign secondary_alt_key = initial_color_value | append: '-secondary'
+    for media_item in product.media
+      if media_item.alt == secondary_alt_key
+        assign secondary_image = media_item.preview_image
+        break
+      endif
+    endfor
+  endif
+  if secondary_image == nil or secondary_image == primary_image
+    for media_item in product.media
+      assign candidate_image = media_item.preview_image
+      if candidate_image != primary_image
+        assign secondary_image = candidate_image
+        break
+      endif
+    endfor
+  endif
 -%}
 
 <product-card-swatches class="tw-group tw-block tw-h-full">
@@ -50,12 +90,13 @@
           width="{{ primary_image.width }}"
           height="{{ primary_image.height }}"
           loading="lazy"
-          class="tw-absolute tw-inset-0 tw-h-full tw-w-full tw-object-cover tw-object-center tw-transition-opacity tw-duration-300 tw-ease-out{% if secondary_image %} group-hover:tw-opacity-0{% endif %}"
+          class="tw-absolute tw-inset-0 tw-h-full tw-w-full tw-object-cover tw-object-center tw-transition-opacity tw-duration-300 tw-ease-out{% if secondary_available %} group-hover:tw-opacity-0{% endif %}"
         >
       {%- endif -%}
 
-      {%- if secondary_image -%}
+      {%- if secondary_available -%}
         <img
+          data-product-card-secondary-image
           src="{{ secondary_image | image_url: width: 600 }}"
           srcset="{{ secondary_image | image_url: width: 400 }} 400w, {{ secondary_image | image_url: width: 600 }} 600w, {{ secondary_image | image_url: width: 800 }} 800w"
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
@@ -82,6 +123,24 @@
             endfor
             assign swatch_image = swatch_variant.featured_image | default: primary_image
             assign swatch_key = value | handle | replace: '-', ''
+
+            assign swatch_secondary_image = nil
+            assign swatch_secondary_alt_key = value | append: '-secondary'
+            for media_item in product.media
+              if media_item.alt == swatch_secondary_alt_key
+                assign swatch_secondary_image = media_item.preview_image
+                break
+              endif
+            endfor
+            if swatch_secondary_image == nil or swatch_secondary_image == swatch_image
+              for media_item in product.media
+                assign swatch_candidate_image = media_item.preview_image
+                if swatch_candidate_image != swatch_image
+                  assign swatch_secondary_image = swatch_candidate_image
+                  break
+                endif
+              endfor
+            endif
           -%}
           {%- capture swatch_hex -%}
             {%- case swatch_key -%}
@@ -119,6 +178,10 @@
             data-image="{{ swatch_image | image_url: width: 600 }}"
             data-srcset="{{ swatch_image | image_url: width: 400 }} 400w, {{ swatch_image | image_url: width: 600 }} 600w, {{ swatch_image | image_url: width: 800 }} 800w"
             data-alt="{{ swatch_image.alt | default: product.title | escape }}"
+            {%- if swatch_secondary_image %}
+            data-secondary-image="{{ swatch_secondary_image | image_url: width: 600 }}"
+            data-secondary-srcset="{{ swatch_secondary_image | image_url: width: 400 }} 400w, {{ swatch_secondary_image | image_url: width: 600 }} 600w, {{ swatch_secondary_image | image_url: width: 800 }} 800w"
+            {%- endif %}
             aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
             aria-label="{{ value }}"
             title="{{ value }}"
