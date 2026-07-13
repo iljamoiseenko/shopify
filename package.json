@@ -1,0 +1,15 @@
+{
+  "name": "shopify-product-card",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Custom Shopify product card component built with TailwindCSS",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/tailwind.css -o ./assets/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./src/tailwind.css -o ./assets/tailwind.css --watch",
+    "dev": "concurrently \"npm:watch:css\" \"shopify theme dev\""
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.13",
+    "concurrently": "^8.2.2"
+  }
+}

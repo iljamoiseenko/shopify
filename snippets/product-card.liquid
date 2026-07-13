@@ -1,0 +1,151 @@
+{% comment %}
+  Renders a product card built from scratch with TailwindCSS utility classes.
+
+  Accepts:
+  - product: {Object} Product Liquid object (required)
+
+  Usage:
+  {% render 'product-card', product: product %}
+{% endcomment %}
+
+{%- liquid
+  assign price = product.price
+  assign compare_price = product.compare_at_price
+  assign on_sale = false
+  if compare_price > price
+    assign on_sale = true
+  endif
+
+  assign primary_image = product.featured_image
+  assign secondary_image = product.media[1].preview_image
+  if secondary_image == primary_image
+    assign secondary_image = nil
+  endif
+
+  assign color_option_index = -1
+  for option in product.options_with_values
+    assign downcased_name = option.name | downcase
+    if downcased_name == 'color' or downcased_name == 'colour'
+      assign color_option_index = forloop.index0
+    endif
+  endfor
+-%}
+
+<product-card-swatches class="tw-group tw-block tw-h-full">
+  <div class="tw-flex tw-h-full tw-flex-col tw-overflow-hidden tw-rounded-2xl tw-border tw-border-solid tw-border-gray-200 tw-bg-white tw-p-4 tw-transition-shadow tw-duration-200 hover:tw-shadow-lg">
+    <a href="{{ product.url }}" class="tw-relative tw-block tw-aspect-square tw-w-full tw-overflow-hidden tw-rounded-xl tw-bg-gray-50">
+      {%- if on_sale -%}
+        <span class="tw-absolute tw-left-3 tw-top-3 tw-z-10 tw-rounded-full tw-border tw-border-solid tw-border-red-500 tw-bg-white tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-text-red-600">
+          {{ 'products.product.on_sale' | t | default: 'On Sale!' }}
+        </span>
+      {%- endif -%}
+
+      {%- if primary_image -%}
+        <img
+          data-product-card-main-image
+          src="{{ primary_image | image_url: width: 600 }}"
+          srcset="{{ primary_image | image_url: width: 400 }} 400w, {{ primary_image | image_url: width: 600 }} 600w, {{ primary_image | image_url: width: 800 }} 800w"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          alt="{{ primary_image.alt | default: product.title | escape }}"
+          width="{{ primary_image.width }}"
+          height="{{ primary_image.height }}"
+          loading="lazy"
+          class="tw-absolute tw-inset-0 tw-h-full tw-w-full tw-object-cover tw-object-center tw-transition-opacity tw-duration-300 tw-ease-out{% if secondary_image %} group-hover:tw-opacity-0{% endif %}"
+        >
+      {%- endif -%}
+
+      {%- if secondary_image -%}
+        <img
+          src="{{ secondary_image | image_url: width: 600 }}"
+          srcset="{{ secondary_image | image_url: width: 400 }} 400w, {{ secondary_image | image_url: width: 600 }} 600w, {{ secondary_image | image_url: width: 800 }} 800w"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          alt=""
+          aria-hidden="true"
+          width="{{ secondary_image.width }}"
+          height="{{ secondary_image.height }}"
+          loading="lazy"
+          class="tw-absolute tw-inset-0 tw-h-full tw-w-full tw-object-cover tw-object-center tw-opacity-0 tw-transition-opacity tw-duration-300 tw-ease-out group-hover:tw-opacity-100"
+        >
+      {%- endif -%}
+    </a>
+
+    {%- if color_option_index > -1 -%}
+      <div class="tw-mt-4 tw-flex tw-flex-wrap tw-gap-2" role="group" aria-label="{{ product.options_with_values[color_option_index].name }}">
+        {%- for value in product.options_with_values[color_option_index].values -%}
+          {%- liquid
+            assign swatch_variant = nil
+            for variant in product.variants
+              if variant.options[color_option_index] == value
+                assign swatch_variant = variant
+                break
+              endif
+            endfor
+            assign swatch_image = swatch_variant.featured_image | default: primary_image
+            assign swatch_key = value | handle | replace: '-', ''
+          -%}
+          {%- capture swatch_hex -%}
+            {%- case swatch_key -%}
+              {%- when 'red' -%}#dc2626
+              {%- when 'orange' -%}#f97316
+              {%- when 'yellow' -%}#facc15
+              {%- when 'green' -%}#16a34a
+              {%- when 'blue' -%}#2563eb
+              {%- when 'navy' -%}#1e3a8a
+              {%- when 'purple' -%}#9333ea
+              {%- when 'pink' -%}#f9a8d4
+              {%- when 'black' -%}#111827
+              {%- when 'white' -%}#ffffff
+              {%- when 'gray' or 'grey' -%}#9ca3af
+              {%- when 'brown' -%}#78350f
+              {%- when 'teal' -%}#0d9488
+              {%- when 'cyan' -%}#06b6d4
+              {%- when 'beige' -%}#e7dfd0
+              {%- when 'tan' -%}#d2b48c
+              {%- when 'gold' -%}#d4af37
+              {%- when 'silver' -%}#c0c0c0
+              {%- when 'maroon' -%}#7f1d1d
+              {%- when 'olive' -%}#556b2f
+              {%- when 'mint' -%}#a7f3d0
+              {%- when 'lavender' -%}#c4b5fd
+              {%- when 'coral' -%}#fb7185
+              {%- when 'turquoise' -%}#2dd4bf
+              {%- when 'charcoal' -%}#374151
+            {%- endcase -%}
+          {%- endcapture -%}
+          {%- assign swatch_hex = swatch_hex | strip -%}
+          <button
+            type="button"
+            data-swatch
+            data-image="{{ swatch_image | image_url: width: 600 }}"
+            data-srcset="{{ swatch_image | image_url: width: 400 }} 400w, {{ swatch_image | image_url: width: 600 }} 600w, {{ swatch_image | image_url: width: 800 }} 800w"
+            data-alt="{{ swatch_image.alt | default: product.title | escape }}"
+            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+            aria-label="{{ value }}"
+            title="{{ value }}"
+            class="tw-h-7 tw-w-7 tw-flex-none tw-rounded-full tw-ring-2 tw-ring-offset-2 tw-ring-transparent tw-transition hover:tw-ring-gray-300 aria-pressed:tw-ring-gray-900 aria-pressed:hover:tw-ring-gray-900"
+            style="{% if swatch_hex != blank %}background-color: {{ swatch_hex }};{% if swatch_hex == '#ffffff' %} box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);{% endif %}{% else %}background-image: url('{{ swatch_image | image_url: width: 60 }}'); background-size: cover; background-position: center;{% endif %}"
+          ></button>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
+    <div class="tw-mt-4 tw-flex tw-flex-1 tw-flex-col tw-justify-end tw-gap-1">
+      {%- if product.vendor != blank -%}
+        <p class="tw-text-sm tw-text-gray-500">{{ product.vendor }}</p>
+      {%- endif -%}
+
+      <h3 class="tw-text-base tw-font-bold tw-leading-snug tw-text-blue-700">
+        <a href="{{ product.url }}" class="hover:tw-underline">{{ product.title | escape }}</a>
+      </h3>
+
+      <div class="tw-mt-1 tw-flex tw-items-center tw-gap-2">
+        {%- if on_sale -%}
+          <span class="tw-text-sm tw-text-gray-400 tw-line-through">{{ compare_price | money }}</span>
+          <span class="tw-text-base tw-font-semibold tw-text-red-600">{{ price | money }}</span>
+        {%- else -%}
+          <span class="tw-text-base tw-font-semibold tw-text-gray-900">{{ price | money }}</span>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</product-card-swatches>
