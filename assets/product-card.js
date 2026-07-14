@@ -23,8 +23,7 @@ class ProductCardSwatches extends HTMLElement {
 
     if (this.secondaryImage) {
       const { secondaryImage, secondarySrcset } = swatch.dataset;
-      // A variant without its own hover shot hides the overlay rather than
-      // showing a stale image from whichever color was selected before it.
+    
       this.secondaryImage.style.display = secondaryImage ? '' : 'none';
       if (secondaryImage) this.secondaryImage.src = secondaryImage;
       if (secondarySrcset) this.secondaryImage.srcset = secondarySrcset;

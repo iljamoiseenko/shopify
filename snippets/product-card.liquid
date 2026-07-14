@@ -1,20 +1,3 @@
-{% comment %}
-  Renders a product card built from scratch with TailwindCSS utility classes.
-
-  Accepts:
-  - product: {Object} Product Liquid object (required)
-
-  Per-variant hover image convention: if an image's alt text is set to
-  "{option value}-secondary" (e.g. "blue-secondary"), it's used as that
-  variant's hover image. Shopify variants only support a single assigned
-  image, so this alt-text pairing is how a second "worn"/lifestyle shot
-  gets associated with a color instead of relying on file naming (which
-  Shopify mangles with random suffixes on upload).
-
-  Usage:
-  {% render 'product-card', product: product %}
-{% endcomment %}
-
 {%- liquid
   assign price = product.price
   assign compare_price = product.compare_at_price
@@ -39,12 +22,6 @@
     assign initial_color_value = initial_variant.options[color_option_index]
   endif
 
-  # A secondary/hover image only makes sense if the product has more than one
-  # photo at all. Whenever that's true we always render the overlay <img>,
-  # even if the best match for the CURRENTLY selected variant happens to
-  # equal the primary photo — otherwise the element wouldn't exist in the DOM
-  # yet and clicking a swatch whose own pair *does* differ would have
-  # nothing to update.
   assign secondary_available = false
   if product.media.size > 1
     assign secondary_available = true
@@ -72,10 +49,10 @@
 -%}
 
 <product-card-swatches class="tw-group tw-block tw-h-full">
-  <div class="tw-flex tw-h-full tw-flex-col tw-overflow-hidden tw-rounded-2xl tw-border tw-border-solid tw-border-gray-200 tw-bg-white tw-p-4 tw-transition-shadow tw-duration-200 hover:tw-shadow-lg">
+  <div class="tw-flex tw-h-full tw-flex-col tw-overflow-hidden tw-rounded-2xl tw-bg-white tw-p-4 tw-transition-shadow tw-duration-200 hover:tw-shadow-lg">
     <a href="{{ product.url }}" class="tw-relative tw-block tw-aspect-square tw-w-full tw-overflow-hidden tw-rounded-xl tw-bg-gray-50">
       {%- if on_sale -%}
-        <span class="tw-absolute tw-left-3 tw-top-3 tw-z-10 tw-rounded-full tw-border tw-border-solid tw-border-red-500 tw-bg-white tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-text-red-600">
+        <span class="tw-absolute tw-left-3 tw-top-3 tw-z-[1] tw-rounded-full tw-border tw-border-solid tw-border-red-500 tw-bg-white tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-text-red-600">
           {{ 'products.product.on_sale' | t | default: 'On Sale!' }}
         </span>
       {%- endif -%}
@@ -90,7 +67,7 @@
           width="{{ primary_image.width }}"
           height="{{ primary_image.height }}"
           loading="lazy"
-          class="tw-absolute tw-inset-0 tw-h-full tw-w-full tw-object-cover tw-object-center tw-transition-opacity tw-duration-300 tw-ease-out{% if secondary_available %} group-hover:tw-opacity-0{% endif %}"
+          class="tw-absolute tw-inset-0 tw-h-full tw-w-full tw-rounded-2xl tw-border tw-border-solid tw-border-gray-200 tw-object-cover tw-object-center tw-transition-opacity tw-duration-300 tw-ease-out{% if secondary_available %} group-hover:tw-opacity-0{% endif %}"
         >
       {%- endif -%}
 
@@ -111,7 +88,7 @@
     </a>
 
     {%- if color_option_index > -1 -%}
-      <div class="tw-mt-4 tw-flex tw-flex-wrap tw-gap-2" role="group" aria-label="{{ product.options_with_values[color_option_index].name }}">
+      <div class="tw-mt-4 tw-px-[2px] tw-flex tw-flex-wrap tw-gap-2 " role="group" aria-label="{{ product.options_with_values[color_option_index].name }}">
         {%- for value in product.options_with_values[color_option_index].values -%}
           {%- liquid
             assign swatch_variant = nil
@@ -185,28 +162,28 @@
             aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
             aria-label="{{ value }}"
             title="{{ value }}"
-            class="tw-h-7 tw-w-7 tw-flex-none tw-rounded-full tw-ring-2 tw-ring-offset-2 tw-ring-transparent tw-transition hover:tw-ring-gray-300 aria-pressed:tw-ring-gray-900 aria-pressed:hover:tw-ring-gray-900"
+            class="tw-h-5 tw-w-5 tw-flex-none tw-rounded-full tw-border-0 tw-ring-1 tw-ring-offset-1 tw-ring-transparent tw-transition hover:tw-ring-gray-300 aria-pressed:tw-ring-[#0A4874] aria-pressed:hover:tw-ring-gray-900 hover:tw-cursor-pointer"
             style="{% if swatch_hex != blank %}background-color: {{ swatch_hex }};{% if swatch_hex == '#ffffff' %} box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);{% endif %}{% else %}background-image: url('{{ swatch_image | image_url: width: 60 }}'); background-size: cover; background-position: center;{% endif %}"
           ></button>
         {%- endfor -%}
       </div>
     {%- endif -%}
 
-    <div class="tw-mt-4 tw-flex tw-flex-1 tw-flex-col tw-justify-end tw-gap-1">
+    <div class="tw-mt-4 tw-flex tw-flex-1 tw-flex-col tw-justify-end tw-gap-[6px]">
       {%- if product.vendor != blank -%}
-        <p class="tw-text-sm tw-text-gray-500">{{ product.vendor }}</p>
+        <p class="tw-text-sm tw-text-[#111111] tw-m-0">{{ product.vendor }}</p>
       {%- endif -%}
 
-      <h3 class="tw-text-base tw-font-bold tw-leading-snug tw-text-blue-700">
-        <a href="{{ product.url }}" class="hover:tw-underline">{{ product.title | escape }}</a>
+      <h3 class="tw-text-base tw-font-bold tw-leading-snug  tw-m-0">
+        <a href="{{ product.url }}" class="hover:tw-underline tw-text-[#0A4874] tw-no-underline">{{ product.title | escape }}</a>
       </h3>
 
-      <div class="tw-mt-1 tw-flex tw-items-center tw-gap-2">
+      <div class="tw-flex tw-items-center tw-gap-2">
         {%- if on_sale -%}
-          <span class="tw-text-sm tw-text-gray-400 tw-line-through">{{ compare_price | money }}</span>
-          <span class="tw-text-base tw-font-semibold tw-text-red-600">{{ price | money }}</span>
+          <span class="tw-text-sm tw-text-[#111111] tw-line-through">{{ compare_price | money }}</span>
+          <span class="tw-text-sm tw-font-semibold tw-text-[#FF0000]">{{ price | money }}</span>
         {%- else -%}
-          <span class="tw-text-base tw-font-semibold tw-text-gray-900">{{ price | money }}</span>
+          <span class="tw-text-sm tw-font-semibold tw-text-gray-900">{{ price | money }}</span>
         {%- endif -%}
       </div>
     </div>
