@@ -14,6 +14,13 @@
     endif
   endfor
 
+  # Structured swatch colors: a product.metafields.custom.color_swatch list
+  # (metaobject_reference, each entry has a 'label' and a 'color' field) lets
+  # a merchant pick real hex values per color name instead of us guessing
+  # from the English word. Falls back to a hardcoded name->hex table below
+  # for products that don't have this metafield configured.
+  assign swatch_metaobjects = product.metafields.custom.color_swatch.value
+
   assign initial_variant = product.selected_or_first_available_variant
   assign primary_image = initial_variant.featured_image | default: product.featured_image
 
@@ -27,8 +34,11 @@
     assign secondary_available = true
   endif
 
-  assign secondary_image = nil
-  if initial_color_value != blank
+  # Hover image resolution order: a dedicated variant metafield (structured
+  # data, the correct place for this) beats the legacy alt-text convention
+  # ("{color}-secondary"), which beats just picking any other product photo.
+  assign secondary_image = initial_variant.metafields.custom.secondary_image.value
+  if secondary_image == nil and initial_color_value != blank
     assign secondary_alt_key = initial_color_value | append: '-secondary'
     for media_item in product.media
       if media_item.alt == secondary_alt_key
@@ -101,14 +111,16 @@
             assign swatch_image = swatch_variant.featured_image | default: primary_image
             assign swatch_key = value | handle | replace: '-', ''
 
-            assign swatch_secondary_image = nil
-            assign swatch_secondary_alt_key = value | append: '-secondary'
-            for media_item in product.media
-              if media_item.alt == swatch_secondary_alt_key
-                assign swatch_secondary_image = media_item.preview_image
-                break
-              endif
-            endfor
+            assign swatch_secondary_image = swatch_variant.metafields.custom.secondary_image.value
+            if swatch_secondary_image == nil
+              assign swatch_secondary_alt_key = value | append: '-secondary'
+              for media_item in product.media
+                if media_item.alt == swatch_secondary_alt_key
+                  assign swatch_secondary_image = media_item.preview_image
+                  break
+                endif
+              endfor
+            endif
             if swatch_secondary_image == nil or swatch_secondary_image == swatch_image
               for media_item in product.media
                 assign swatch_candidate_image = media_item.preview_image
@@ -118,37 +130,49 @@
                 endif
               endfor
             endif
+
+            assign swatch_hex = blank
+            if swatch_metaobjects
+              for swatch_ref in swatch_metaobjects
+                if swatch_ref.label == value
+                  assign swatch_hex = swatch_ref.color
+                  break
+                endif
+              endfor
+            endif
           -%}
-          {%- capture swatch_hex -%}
-            {%- case swatch_key -%}
-              {%- when 'red' -%}#dc2626
-              {%- when 'orange' -%}#f97316
-              {%- when 'yellow' -%}#facc15
-              {%- when 'green' -%}#16a34a
-              {%- when 'blue' -%}#2563eb
-              {%- when 'navy' -%}#1e3a8a
-              {%- when 'purple' -%}#9333ea
-              {%- when 'pink' -%}#f9a8d4
-              {%- when 'black' -%}#111827
-              {%- when 'white' -%}#ffffff
-              {%- when 'gray' or 'grey' -%}#9ca3af
-              {%- when 'brown' -%}#78350f
-              {%- when 'teal' -%}#0d9488
-              {%- when 'cyan' -%}#06b6d4
-              {%- when 'beige' -%}#e7dfd0
-              {%- when 'tan' -%}#d2b48c
-              {%- when 'gold' -%}#d4af37
-              {%- when 'silver' -%}#c0c0c0
-              {%- when 'maroon' -%}#7f1d1d
-              {%- when 'olive' -%}#556b2f
-              {%- when 'mint' -%}#a7f3d0
-              {%- when 'lavender' -%}#c4b5fd
-              {%- when 'coral' -%}#fb7185
-              {%- when 'turquoise' -%}#2dd4bf
-              {%- when 'charcoal' -%}#374151
-            {%- endcase -%}
-          {%- endcapture -%}
-          {%- assign swatch_hex = swatch_hex | strip -%}
+          {%- if swatch_hex == blank -%}
+            {%- capture swatch_hex -%}
+              {%- case swatch_key -%}
+                {%- when 'red' -%}#dc2626
+                {%- when 'orange' -%}#f97316
+                {%- when 'yellow' -%}#facc15
+                {%- when 'green' -%}#16a34a
+                {%- when 'blue' -%}#2563eb
+                {%- when 'navy' -%}#1e3a8a
+                {%- when 'purple' -%}#9333ea
+                {%- when 'pink' -%}#f9a8d4
+                {%- when 'black' -%}#111827
+                {%- when 'white' -%}#ffffff
+                {%- when 'gray' or 'grey' -%}#9ca3af
+                {%- when 'brown' -%}#78350f
+                {%- when 'teal' -%}#0d9488
+                {%- when 'cyan' -%}#06b6d4
+                {%- when 'beige' -%}#e7dfd0
+                {%- when 'tan' -%}#d2b48c
+                {%- when 'gold' -%}#d4af37
+                {%- when 'silver' -%}#c0c0c0
+                {%- when 'maroon' -%}#7f1d1d
+                {%- when 'olive' -%}#556b2f
+                {%- when 'mint' -%}#a7f3d0
+                {%- when 'lavender' -%}#c4b5fd
+                {%- when 'coral' -%}#fb7185
+                {%- when 'turquoise' -%}#2dd4bf
+                {%- when 'charcoal' -%}#374151
+              {%- endcase -%}
+            {%- endcapture -%}
+            {%- assign swatch_hex = swatch_hex | strip -%}
+          {%- endif -%}
           <button
             type="button"
             data-swatch
